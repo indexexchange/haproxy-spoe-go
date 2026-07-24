@@ -1,7 +1,6 @@
 package frame
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -9,63 +8,60 @@ import (
 	"github.com/indexexchange/haproxy-spoe-go/varint"
 )
 
-func (f *Frame) Encode(dest io.Writer) (n int, err error) {
-	buf := bytes.Buffer{}
+// Encode marshals the frame and writes it to dest.
+//
+// The whole wire frame (4-byte length prefix included) is built in
+// f.writeBuf, which is retained across pool cycles, and written to dest
+// in a single Write call. The single Write matters for correctness, not
+// just speed: ACK frames are encoded onto a shared connection from
+// concurrent NOTIFY handler goroutines, and one Write per frame is what
+// keeps frames from interleaving on the wire.
+func (f *Frame) Encode(dest io.Writer) (int, error) {
+	buf := append(f.writeBuf[:0], 0, 0, 0, 0) // frame length, filled in below
 
-	buf.WriteByte(byte(f.Type))
+	buf = append(buf, byte(f.Type))
 
 	binary.BigEndian.PutUint32(f.tmp[:], f.Flags)
+	buf = append(buf, f.tmp[0:4]...)
 
-	buf.Write(f.tmp[0:4])
-
-	n = varint.PutUvarint(f.varintBuf[:], f.StreamID)
-	buf.Write(f.varintBuf[:n])
+	n := varint.PutUvarint(f.varintBuf[:], f.StreamID)
+	buf = append(buf, f.varintBuf[:n]...)
 
 	n = varint.PutUvarint(f.varintBuf[:], f.FrameID)
-	buf.Write(f.varintBuf[:n])
-
-	var payload []byte
+	buf = append(buf, f.varintBuf[:n]...)
 
 	switch f.Type {
 	case TypeAgentHello, TypeAgentDisconnect, TypeHaproxyHello, TypeHaproxyDisconnect:
-		payload, err = f.KV.Bytes()
+		payload, err := f.KV.Bytes()
 		if err != nil {
-			return
+			return 0, err
 		}
+		buf = append(buf, payload...)
 
 	case TypeAgentAck:
-		if f.Actions != nil {
-			for _, act := range f.Actions {
-				payload, err = act.Marshal(payload)
-				if err != nil {
-					return
-				}
+		for _, act := range f.Actions {
+			var err error
+			buf, err = act.Marshal(buf)
+			if err != nil {
+				return 0, err
 			}
 		}
+
 	case TypeNotify:
 		if len(*f.Messages) > 0 {
-			err = fmt.Errorf("encoding Notify frame with Message isn't handled yet")
-			return
-
+			return 0, fmt.Errorf("encoding Notify frame with Message isn't handled yet")
 		}
 	default:
-		err = fmt.Errorf("unexpected frame type %d", f.Type)
-		return
+		return 0, fmt.Errorf("unexpected frame type %d", f.Type)
 	}
 
-	buf.Write(payload)
+	binary.BigEndian.PutUint32(buf[0:4], uint32(len(buf)-4))
+	f.writeBuf = buf
 
-	binary.BigEndian.PutUint32(f.tmp[:], uint32(buf.Len()))
-
-	n, err = dest.Write(f.tmp[0:4])
-	if err != nil || n != 4 {
-		return 0, fmt.Errorf("error write frameSize. writes %d, expect %d, err: %v", n, len(f.tmp), err)
+	n, err := dest.Write(buf)
+	if err != nil || n != len(buf) {
+		return 0, fmt.Errorf("error write frame. writes %d, expect %d, err: %v", n, len(buf), err)
 	}
 
-	n, err = dest.Write(buf.Bytes())
-	if err != nil || n != buf.Len() {
-		return 0, fmt.Errorf("error write frame. writes %d, expect %d, err: %v", n, len(f.tmp), err)
-	}
-
-	return 4 + buf.Len(), nil
+	return n, nil
 }

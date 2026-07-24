@@ -1,7 +1,6 @@
 package worker
 
 import (
-	"bytes"
 	"fmt"
 
 	"github.com/indexexchange/haproxy-spoe-go/frame"
@@ -37,19 +36,11 @@ func (w *worker) processNotifyFrame(f *frame.Frame) {
 }
 
 func (w *worker) writeFrame(f *frame.Frame) error {
-	buf := bytes.NewBuffer(make([]byte, 0))
-	n, err := f.Encode(buf)
-	if err != nil {
-		return fmt.Errorf("cannot marshal frame: %w", err)
-	}
-
-	n, err = w.conn.Write(buf.Bytes())
-	if err != nil {
+	// Encode marshals into the frame's pooled buffer and writes it to the
+	// connection in a single Write call, which keeps concurrently written
+	// frames from interleaving on the wire.
+	if _, err := f.Encode(w.conn); err != nil {
 		return fmt.Errorf("cannot write frame to connection: %w", err)
-	}
-
-	if n != buf.Len() {
-		return fmt.Errorf("wrote wrong number of bytes count %d, expect %d", n, buf.Len())
 	}
 
 	return nil
