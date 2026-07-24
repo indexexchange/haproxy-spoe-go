@@ -84,7 +84,9 @@ func TestWorkerConcurrent(t *testing.T) {
 	duration := time.Second
 	loop := func(s client.Client) {
 		if s.Init() != nil {
-			t.Fatal("unexpected error on Init")
+			// t.Fatal is not allowed from a non-test goroutine
+			t.Error("unexpected error on Init")
+			return
 		}
 		for {
 			select {

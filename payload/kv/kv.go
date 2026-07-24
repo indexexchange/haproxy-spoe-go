@@ -47,7 +47,10 @@ func (kv *KV) Data() []Item {
 }
 
 func (kv *KV) Reset() {
-	kv.m = make([]Item, 0)
+	// Zero the items so pooled KVs don't pin the previous request's values,
+	// then truncate in place to keep the slice capacity across pool reuses.
+	clear(kv.m)
+	kv.m = kv.m[:0]
 }
 
 func (kv *KV) Add(key string, value interface{}) {
