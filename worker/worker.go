@@ -9,9 +9,9 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/negasus/haproxy-spoe-go/frame"
-	"github.com/negasus/haproxy-spoe-go/logger"
-	"github.com/negasus/haproxy-spoe-go/request"
+	"github.com/indexexchange/haproxy-spoe-go/frame"
+	"github.com/indexexchange/haproxy-spoe-go/logger"
+	"github.com/indexexchange/haproxy-spoe-go/request"
 )
 
 const (
