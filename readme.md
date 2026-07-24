@@ -1,5 +1,24 @@
 # Haproxy SPOE Golang Agent Library [![Go Report Card](https://goreportcard.com/badge/github.com/indexexchange/haproxy-spoe-go)](https://goreportcard.com/report/github.com/indexexchange/haproxy-spoe-go) ![](https://github.com/indexexchange/haproxy-spoe-go/workflows/Test/badge.svg)
 
+## About this fork
+
+This is a fork of [negasus/haproxy-spoe-go](https://github.com/negasus/haproxy-spoe-go),
+maintained by Index Exchange and tuned for **high-throughput, high-concurrency
+workloads on many-CPU machines**.
+
+How it differs from the upstream library:
+
+- **Reduced allocation churn** — read buffers are reused across pooled frames,
+  cutting per-request allocations and GC pressure under sustained load.
+- **HAProxy 3.x ready** — connection resets from `mux_spop` (multiplexed SPOP
+  connections) are handled as normal closes instead of spurious errors.
+- **Built to scale out** — each connection and each NOTIFY frame is handled on
+  its own goroutine, with frames and requests recycled via `sync.Pool`, so the
+  agent scales with available cores.
+
+Future performance and concurrency work lands here first; the fork tracks
+upstream fixes as needed.
+
 Terms from [Haproxy SPOE specification](https://www.haproxy.org/download/1.9/doc/SPOE.txt)
 
 ```
