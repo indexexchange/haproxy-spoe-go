@@ -8,16 +8,22 @@ workloads on many-CPU machines**.
 
 How it differs from the upstream library:
 
-- **Reduced allocation churn** — read buffers are reused across pooled frames,
-  cutting per-request allocations and GC pressure under sustained load.
+- **Allocation-free hot path** — frames encode into a pooled write buffer and
+  go to the connection as a single `Write` (v1.0.10), read buffers are reused
+  across pooled frames, and KV storage keeps its capacity across pool cycles
+  (v1.0.9). Under sustained load the NOTIFY/ACK path runs at 0 allocs/op,
+  collapsing GC pressure (see `BenchmarkFrame_EncodeAck`).
 - **HAProxy 3.x ready** — connection resets from `mux_spop` (multiplexed SPOP
   connections) are handled as normal closes instead of spurious errors.
 - **Built to scale out** — each connection and each NOTIFY frame is handled on
   its own goroutine, with frames and requests recycled via `sync.Pool`, so the
   agent scales with available cores.
+- **Requires Go 1.26+** (upstream targets 1.19).
 
 Future performance and concurrency work lands here first; the fork tracks
-upstream fixes as needed.
+upstream fixes as needed. See the
+[releases](https://github.com/indexexchange/haproxy-spoe-go/releases) for
+per-version details.
 
 Terms from [Haproxy SPOE specification](https://www.haproxy.org/download/1.9/doc/SPOE.txt)
 

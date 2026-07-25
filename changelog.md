@@ -1,5 +1,24 @@
 # Changelog
 
+# v1.0.10 (2026-07-24)
+
+- perf(frame): encode frames into a pooled write buffer retained across pool
+  cycles, and write each frame to the connection as a single `Write` (#1).
+  `Action.Marshal` appends into a caller-provided buffer instead of growing a
+  nil slice per ACK. Hot encode path drops to 0 allocs/op.
+
+# v1.0.9 (2026-07-24)
+
+- perf(kv): keep slice capacity across pool reuses in `KV.Reset`
+- update to Go 1.26, fix a pre-existing vet error in worker tests
+
+# v1.0.8 (2026-07-24)
+
+- fork of negasus/haproxy-spoe-go: module renamed to
+  `github.com/indexexchange/haproxy-spoe-go`
+- worker: treat connection reset as normal close (upstream #27)
+- worker: reuse read buffer across pooled frames (upstream #28)
+
 # v1.0.7 (2025-08-18)
 
 - worker: wait for in-flight Notify handlers before closing (#26) Simon Taranto* 
