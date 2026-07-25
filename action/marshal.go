@@ -7,6 +7,9 @@ import (
 	"github.com/indexexchange/haproxy-spoe-go/varint"
 )
 
+// Marshal appends the wire encoding of the action to buf and returns the
+// extended buffer. buf is returned (possibly grown) even on error, so
+// callers reusing a pooled buffer never lose it.
 func (action *Action) Marshal(buf []byte) ([]byte, error) {
 	var nb byte
 
@@ -16,25 +19,19 @@ func (action *Action) Marshal(buf []byte) ([]byte, error) {
 	case TypeUnsetVar:
 		nb = nbVarsUnsetVar
 	default:
-		return nil, fmt.Errorf("unexpected action type: %v", action.Type)
+		return buf, fmt.Errorf("unexpected action type: %v", action.Type)
 	}
 
-	buf = append(buf, byte(action.Type))
-	buf = append(buf, nb)
-	buf = append(buf, byte(action.Scope))
+	buf = append(buf, byte(action.Type), nb, byte(action.Scope))
 
-	b := make([]byte, 10)
-	n := varint.PutUvarint(b, uint64(len(action.Name)))
+	var b [10]byte
+	n := varint.PutUvarint(b[:], uint64(len(action.Name)))
 
 	buf = append(buf, b[:n]...)
 	buf = append(buf, action.Name...)
 
-	valueBuf, n, err := typeddata.Encode(action.Value, make([]byte, 0))
-	if err != nil {
-		return nil, err
-	}
+	var err error
+	buf, _, err = typeddata.Encode(action.Value, buf)
 
-	buf = append(buf, valueBuf[:n]...)
-
-	return buf, nil
+	return buf, err
 }
