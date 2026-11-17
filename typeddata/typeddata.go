@@ -58,7 +58,8 @@ func Encode(data interface{}, buf []byte) ([]byte, int, error) {
 
 	case int32:
 		buf = append(buf, TypeInt32)
-		var b [8]byte
+		// Needs 10 because negative int32 sign-extends to ~MaxUint64 when widened to uint64.
+		var b [10]byte
 		i := varint.PutUvarint(b[:], uint64(v))
 		buf = append(buf, b[:i]...)
 		return buf, i + 1, nil
@@ -72,28 +73,28 @@ func Encode(data interface{}, buf []byte) ([]byte, int, error) {
 
 	case int:
 		buf = append(buf, TypeInt64)
-		var b [8]byte
+		var b [10]byte
 		i := varint.PutUvarint(b[:], uint64(v))
 		buf = append(buf, b[:i]...)
 		return buf, i + 1, nil
 
 	case int64:
 		buf = append(buf, TypeInt64)
-		var b [8]byte
+		var b [10]byte
 		i := varint.PutUvarint(b[:], uint64(v))
 		buf = append(buf, b[:i]...)
 		return buf, i + 1, nil
 
 	case uint:
 		buf = append(buf, TypeUInt64)
-		var b [8]byte
+		var b [10]byte
 		i := varint.PutUvarint(b[:], uint64(v))
 		buf = append(buf, b[:i]...)
 		return buf, i + 1, nil
 
 	case uint64:
 		buf = append(buf, TypeUInt64)
-		var b [8]byte
+		var b [10]byte
 		i := varint.PutUvarint(b[:], uint64(v))
 		buf = append(buf, b[:i]...)
 		return buf, i + 1, nil
