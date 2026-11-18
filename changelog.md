@@ -1,5 +1,13 @@
 # Changelog
 
+# v1.0.11 (2026-11-17)
+
+- merge upstream negasus/haproxy-spoe-go v1.0.8:
+  - typeddata: fix panic when encoding integers above ~2^53 (upstream #29)
+  - frame: wrap read errors with `%w` (upstream #31). The worker now treats a
+    connection reset or unexpected EOF during a frame read as a normal close
+    (upstream #27), so it no longer logs them as "error read frame" errors.
+
 # v1.0.10 (2026-07-24)
 
 - perf(frame): encode frames into a pooled write buffer retained across pool
